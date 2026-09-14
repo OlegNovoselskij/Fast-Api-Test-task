@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "FanSuite Chat",
+    "slug": "fansuite-chat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fansuite.chatdemo"
+    },
+    "android": {
+      "package": "com.fansuite.chatdemo",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "softwareKeyboardLayoutMode": "resize",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": ["expo-sqlite", "expo-dev-client"]
+  }
+}
