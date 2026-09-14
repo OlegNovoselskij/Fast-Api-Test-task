@@ -1,4 +1,4 @@
-import { createStore } from 'zustand/vanilla';
+import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { ApiError, TransportError } from './errors';
 
@@ -10,7 +10,7 @@ export type NetworkState = {
   failNextSendWithServerError: boolean;
 };
 
-type Options = { latencyMs?: () => number };
+type Options = { latencyMs?: () => number; isOnline?: boolean };
 
 const defaultLatency = () => 250 + Math.random() * 250;
 
@@ -22,16 +22,17 @@ const wait = (ms: number) =>
  * so the client can never share object references with server state.
  */
 export class MockNetwork {
-  readonly state = createStore<NetworkState>(() => ({
-    isOnline: true,
-    loseNextSendResponse: false,
-    failNextSendWithServerError: false,
-  }));
+  readonly state: StoreApi<NetworkState>;
 
   private readonly latencyMs: () => number;
 
-  constructor({ latencyMs = defaultLatency }: Options = {}) {
+  constructor({ latencyMs = defaultLatency, isOnline = true }: Options = {}) {
     this.latencyMs = latencyMs;
+    this.state = createStore<NetworkState>(() => ({
+      isOnline,
+      loseNextSendResponse: false,
+      failNextSendWithServerError: false,
+    }));
   }
 
   get isOnline(): boolean {
