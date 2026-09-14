@@ -11,7 +11,7 @@ import { mergeMessages } from './mergeMessages';
 export const PAGE_SIZE = 50;
 const CATCH_UP_PAGE_SIZE = 200;
 const MAX_SERVER_ERROR_ATTEMPTS = 3;
-const BASE_RETRY_DELAY_MS = 1_000;
+const BASE_RETRY_DELAY_MS = 2_000;
 const MAX_RETRY_DELAY_MS = 30_000;
 
 export type ChatState = {
@@ -191,6 +191,7 @@ export class ChatSyncEngine {
       await this.flushOutbox();
       this.retryDelayMs = BASE_RETRY_DELAY_MS;
     } catch (error) {
+      if (this.isStopped) return;
       if (!(error instanceof TransportError)) console.error('Chat sync failed', error);
       this.scheduleRetry();
     }

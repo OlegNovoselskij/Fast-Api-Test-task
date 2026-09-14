@@ -104,7 +104,7 @@ describe('ChatSyncEngine', () => {
       await chat.engine.sync();
       expect(chat.engine.store.getState().outbox).toHaveLength(1);
 
-      await jest.advanceTimersByTimeAsync(1_000);
+      await jest.advanceTimersByTimeAsync(2_000);
       await chat.engine.sync();
 
       expect(chat.threadTexts()).toEqual(['hello']);
@@ -118,7 +118,7 @@ describe('ChatSyncEngine', () => {
 
       await chat.engine.send('hello');
       await chat.engine.sync();
-      await jest.advanceTimersByTimeAsync(1_000);
+      await jest.advanceTimersByTimeAsync(2_000);
       await chat.engine.sync();
 
       expect(sendSpy).toHaveBeenCalledTimes(1);
@@ -142,7 +142,7 @@ describe('ChatSyncEngine', () => {
         attempts: 1,
       });
 
-      await jest.advanceTimersByTimeAsync(1_000);
+      await jest.advanceTimersByTimeAsync(2_000);
       await chat.engine.sync();
 
       expect(chat.engine.store.getState().outbox).toEqual([]);
@@ -158,10 +158,10 @@ describe('ChatSyncEngine', () => {
       await chat.engine.send('keep me');
       await chat.engine.sync();
       failSend();
-      await jest.advanceTimersByTimeAsync(1_000);
+      await jest.advanceTimersByTimeAsync(2_000);
       await chat.engine.sync();
       failSend();
-      await jest.advanceTimersByTimeAsync(2_000);
+      await jest.advanceTimersByTimeAsync(4_000);
       await chat.engine.sync();
 
       const [failed] = chat.engine.store.getState().outbox;
