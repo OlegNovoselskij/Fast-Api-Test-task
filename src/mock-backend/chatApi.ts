@@ -1,4 +1,10 @@
-import type { ChatServer, MessagePage, SendMessageRequest, ServerMessage } from './chatServer';
+import type {
+  ChatServer,
+  MessagePage,
+  MessageQuota,
+  SendMessageRequest,
+  ServerMessage,
+} from './chatServer';
 import type { MockNetwork } from './mockNetwork';
 
 /** What the app sees of the chat backend: every call goes through the simulated network. */
@@ -7,6 +13,7 @@ export interface ChatApi {
   getLatest(limit: number): Promise<MessagePage>;
   getBefore(beforeSeq: number, limit: number): Promise<MessagePage>;
   getAfter(afterSeq: number, limit: number): Promise<MessagePage>;
+  getQuota(): Promise<MessageQuota>;
 }
 
 export function createChatApi(network: MockNetwork, server: ChatServer): ChatApi {
@@ -17,5 +24,6 @@ export function createChatApi(network: MockNetwork, server: ChatServer): ChatApi
       network.request('chat.read', () => server.getBefore(beforeSeq, limit)),
     getAfter: (afterSeq, limit) =>
       network.request('chat.read', () => server.getAfter(afterSeq, limit)),
+    getQuota: () => network.request('chat.read', () => server.getQuota()),
   };
 }

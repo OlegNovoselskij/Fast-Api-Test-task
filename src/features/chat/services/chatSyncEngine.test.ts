@@ -1,3 +1,5 @@
+import { FREE_MESSAGE_LIMIT } from '@/mock-backend/chatServer';
+
 import { createChatHarness } from '../testing/chatHarness';
 
 describe('ChatSyncEngine', () => {
@@ -90,6 +92,36 @@ describe('ChatSyncEngine', () => {
     expect(chat.engine.store.getState().messages.map((m) => m.seq)).toEqual(
       before.map((m) => m.seq),
     );
+  });
+
+  it('explains a send blocked by the free limit and sends it once access is granted', async () => {
+    let isPaid = false;
+    const chat = await createChatHarness({ hasPaidAccess: async () => isPaid });
+    for (let index = 0; index < FREE_MESSAGE_LIMIT; index += 1) {
+      await chat.engine.send(`free ${index}`);
+    }
+    await chat.engine.sync();
+
+    await chat.engine.send('over the limit');
+    await chat.engine.send('also blocked');
+    await chat.engine.sync();
+
+    const state = chat.engine.store.getState();
+    expect(state.quota).toEqual({ isUnlimited: false, remaining: 0 });
+    expect(
+      state.outbox.map((e) => [e.text, e.status, e.error?.code, e.error?.isRetryable]),
+    ).toEqual([
+      ['over the limit', 'failed', 'QUOTA_EXCEEDED', false],
+      ['also blocked', 'failed', 'QUOTA_EXCEEDED', false],
+    ]);
+
+    isPaid = true;
+    await chat.engine.onPaidAccessChanged();
+    await chat.engine.sync();
+
+    expect(chat.engine.store.getState().outbox).toEqual([]);
+    expect((await chat.serverTexts()).slice(-2)).toEqual(['over the limit', 'also blocked']);
+    expect(chat.engine.store.getState().quota).toEqual({ isUnlimited: true });
   });
 
   describe('lost responses', () => {
