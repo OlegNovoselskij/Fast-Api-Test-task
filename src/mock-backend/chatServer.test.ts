@@ -1,7 +1,7 @@
 import { createTestDatabaseHost } from '@/shared/db/testing/nodeSqliteDriver';
 
 import { createChatApi } from './chatApi';
-import { ChatServer } from './chatServer';
+import { ChatServer, FREE_MESSAGE_LIMIT } from './chatServer';
 import { TransportError } from './errors';
 import { generateHistory } from './history';
 import { MockNetwork } from './mockNetwork';
@@ -63,6 +63,43 @@ describe('ChatServer', () => {
 
     expect(retry).toEqual(first);
     expect((await server.getLatest(10)).messages).toHaveLength(1);
+  });
+
+  describe('free message limit', () => {
+    const setupFree = async (hasPaidAccess: () => Promise<boolean>) => {
+      const host = createTestDatabaseHost();
+      const server = await ChatServer.open(await host.open('backend'), {
+        historySize: 20,
+        hasPaidAccess,
+      });
+      const send = (index: number) => server.sendMessage({ clientId: `c-${index}`, text: 'hi' });
+      return { server, send };
+    };
+
+    it('rejects sends beyond the free limit with a non-retryable error', async () => {
+      const { server, send } = await setupFree(async () => false);
+      for (let index = 0; index < FREE_MESSAGE_LIMIT; index += 1) await send(index);
+
+      await expect(send(FREE_MESSAGE_LIMIT)).rejects.toMatchObject({
+        code: 'QUOTA_EXCEEDED',
+        isRetryable: false,
+      });
+      expect(await server.getQuota()).toEqual({ isUnlimited: false, remaining: 0 });
+    });
+
+    it('still returns an accepted message when it is retried after the limit is reached', async () => {
+      const { send } = await setupFree(async () => false);
+      for (let index = 0; index < FREE_MESSAGE_LIMIT; index += 1) await send(index);
+
+      await expect(send(FREE_MESSAGE_LIMIT - 1)).resolves.toMatchObject({ text: 'hi' });
+    });
+
+    it('does not limit fans with paid access', async () => {
+      const { server, send } = await setupFree(async () => true);
+      for (let index = 0; index <= FREE_MESSAGE_LIMIT; index += 1) await send(index);
+
+      expect(await server.getQuota()).toEqual({ isUnlimited: true });
+    });
   });
 
   it('rejects requests while offline without reaching the server', async () => {

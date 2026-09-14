@@ -10,12 +10,18 @@ import { ChatSyncEngine } from '../services/chatSyncEngine';
  * Wires the real engine, local store and mock backend over in-memory SQLite. `relaunch()`
  * drops every live object (like a force-quit) and boots again from what was persisted.
  */
-export async function createChatHarness({ historySize = 0 } = {}) {
+export async function createChatHarness({
+  historySize = 0,
+  hasPaidAccess,
+}: {
+  historySize?: number;
+  hasPaidAccess?: () => Promise<boolean>;
+} = {}) {
   const host = createTestDatabaseHost();
   const network = new MockNetwork({ latencyMs: () => 0 });
   let clientIdCounter = 0;
 
-  const server = await ChatServer.open(await host.open('backend'), { historySize });
+  const server = await ChatServer.open(await host.open('backend'), { historySize, hasPaidAccess });
 
   const boot = async () => {
     const local = await ChatLocalStore.open(await host.open('client'));

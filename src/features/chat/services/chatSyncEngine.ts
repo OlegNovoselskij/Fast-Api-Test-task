@@ -1,7 +1,7 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import type { ChatApi } from '@/mock-backend/chatApi';
-import { MAX_MESSAGE_LENGTH } from '@/mock-backend/chatServer';
+import { MAX_MESSAGE_LENGTH, type MessageQuota } from '@/mock-backend/chatServer';
 import { ApiError, TransportError } from '@/mock-backend/errors';
 
 import type { ChatLocalStore } from '../data/chatLocalStore';
@@ -24,6 +24,8 @@ export type ChatState = {
   hasOlder: boolean;
   isLoadingOlder: boolean;
   olderUnavailableOffline: boolean;
+  /** Last quota the server reported; `null` until known. */
+  quota: MessageQuota | null;
 };
 
 export type Connectivity = {
@@ -71,6 +73,7 @@ export class ChatSyncEngine {
       hasOlder: false,
       isLoadingOlder: false,
       olderUnavailableOffline: false,
+      quota: null,
     }));
   }
 
@@ -131,6 +134,12 @@ export class ChatSyncEngine {
     this.setState({ outbox: this.state.outbox.filter((e) => e.clientId !== clientId) });
   }
 
+  /** Called when paid access changes: refresh the quota and resend what the limit blocked. */
+  async onPaidAccessChanged(): Promise<void> {
+    await this.requeueFailed('QUOTA_EXCEEDED');
+    void this.sync();
+  }
+
   sync(): Promise<void> {
     if (this.running) {
       this.rerunRequested = true;
@@ -189,6 +198,7 @@ export class ChatSyncEngine {
     try {
       await this.pullNewMessages();
       await this.flushOutbox();
+      this.setState({ quota: await this.api.getQuota() });
       this.retryDelayMs = BASE_RETRY_DELAY_MS;
     } catch (error) {
       if (this.isStopped) return;

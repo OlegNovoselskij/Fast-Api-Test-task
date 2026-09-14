@@ -1,4 +1,4 @@
-import type { SqlDatabase, SqlValue } from '@/shared/db/sqlDatabase';
+import type { SqlDatabase, SqlExecutor, SqlValue } from '@/shared/db/sqlDatabase';
 
 import { ApiError } from './errors';
 import { createRandom, createSentence, generateHistory, HISTORY_SIZE } from './history';
@@ -19,6 +19,9 @@ export type MessagePage = { messages: ServerMessage[]; hasMore: boolean };
 export type SendMessageRequest = { clientId: string; text: string };
 
 export const MAX_MESSAGE_LENGTH = 400;
+export const FREE_MESSAGE_LIMIT = 10;
+
+export type MessageQuota = { isUnlimited: true } | { isUnlimited: false; remaining: number };
 
 type MessageRow = {
   seq: number;
@@ -39,15 +42,24 @@ const toMessage = (row: MessageRow): ServerMessage => ({
   createdAt: row.created_at,
 });
 
-type Options = { now?: () => number; historySize?: number };
+type Options = {
+  now?: () => number;
+  historySize?: number;
+  /** Omit to disable the free-message limit. */
+  hasPaidAccess?: () => Promise<boolean>;
+};
 
 export class ChatServer {
   private constructor(
     private readonly db: SqlDatabase,
     private readonly now: () => number,
+    private readonly hasPaidAccess: (() => Promise<boolean>) | undefined,
   ) {}
 
-  static async open(db: SqlDatabase, { now = Date.now, historySize = HISTORY_SIZE }: Options = {}) {
+  static async open(
+    db: SqlDatabase,
+    { now = Date.now, historySize = HISTORY_SIZE, hasPaidAccess }: Options = {},
+  ) {
     await db.exec(`
       CREATE TABLE IF NOT EXISTS messages (
         seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,7 +71,7 @@ export class ChatServer {
       CREATE UNIQUE INDEX IF NOT EXISTS messages_client_id
         ON messages (client_id) WHERE client_id IS NOT NULL;
     `);
-    const server = new ChatServer(db, now);
+    const server = new ChatServer(db, now, hasPaidAccess);
     await server.seedIfEmpty(historySize);
     return server;
   }
@@ -67,6 +79,8 @@ export class ChatServer {
   /**
    * Idempotent on `clientId`: a retry of an accepted send returns the stored message instead of
    * inserting a copy, so at-least-once delivery from the client yields exactly one message.
+   * The duplicate check runs before the quota check, so retrying an accepted message never
+   * fails or spends another free message.
    */
   async sendMessage({ clientId, text }: SendMessageRequest): Promise<ServerMessage> {
     const body = text.trim();
@@ -74,11 +88,21 @@ export class ChatServer {
       throw new ApiError(400, 'INVALID_REQUEST', 'Messages must be 1–400 characters.');
     }
 
+    const isPaid = this.hasPaidAccess ? await this.hasPaidAccess() : true;
+
     return this.db.transaction(async (tx) => {
       const existing = await tx.getFirst<MessageRow>('SELECT * FROM messages WHERE client_id = ?', [
         clientId,
       ]);
       if (existing) return toMessage(existing);
+
+      if (!isPaid && (await countFreeMessagesUsed(tx)) >= FREE_MESSAGE_LIMIT) {
+        throw new ApiError(
+          403,
+          'QUOTA_EXCEEDED',
+          `You’ve used all ${FREE_MESSAGE_LIMIT} free messages. Get All Access to keep chatting.`,
+        );
+      }
 
       const { lastInsertRowId } = await tx.run(
         'INSERT INTO messages (client_id, author, text, created_at) VALUES (?, ?, ?, ?)',
@@ -122,6 +146,12 @@ export class ChatServer {
     return { messages: rows.slice(0, limit).map(toMessage), hasMore: rows.length > limit };
   }
 
+  async getQuota(): Promise<MessageQuota> {
+    if (!this.hasPaidAccess || (await this.hasPaidAccess())) return { isUnlimited: true };
+    const used = await countFreeMessagesUsed(this.db);
+    return { isUnlimited: false, remaining: Math.max(0, FREE_MESSAGE_LIMIT - used) };
+  }
+
   /** Dev control: creator messages that arrive while the fan's device is offline. */
   async deliverIncoming(count: number): Promise<void> {
     const random = createRandom(this.now());
@@ -161,4 +191,12 @@ export class ChatServer {
       await flush();
     });
   }
+}
+
+/** Seeded history has no client ID, so only messages sent from the app count. */
+async function countFreeMessagesUsed(executor: SqlExecutor): Promise<number> {
+  const row = await executor.getFirst<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM messages WHERE author = 'fan' AND client_id IS NOT NULL",
+  );
+  return row?.count ?? 0;
 }

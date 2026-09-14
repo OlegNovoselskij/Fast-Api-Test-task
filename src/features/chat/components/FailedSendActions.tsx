@@ -9,6 +9,7 @@ type Props = {
   error: SendError;
   onRetry: (clientId: string) => void;
   onDiscard: (clientId: string) => void;
+  onUpgrade: () => void;
 };
 
 export const FailedSendActions = memo(function FailedSendActions({
@@ -16,16 +17,29 @@ export const FailedSendActions = memo(function FailedSendActions({
   error,
   onRetry,
   onDiscard,
+  onUpgrade,
 }: Props) {
   return (
     <View style={styles.container} accessibilityLiveRegion="polite">
       <Text style={styles.message}>{error.message}</Text>
       <View style={styles.actions}>
+        {error.code === 'QUOTA_EXCEEDED' && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Get All Access to send this message"
+            onPress={onUpgrade}
+            style={({ pressed }) => [styles.button, styles.primary, pressed && styles.pressed]}
+            testID="failed-upgrade"
+          >
+            <Text style={styles.primaryLabel}>Get All Access</Text>
+          </Pressable>
+        )}
         {error.isRetryable && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Retry sending this message"
             onPress={() => onRetry(clientId)}
+            testID="failed-retry"
             style={({ pressed }) => [styles.button, styles.primary, pressed && styles.pressed]}
           >
             <Text style={styles.primaryLabel}>Retry</Text>
