@@ -1,0 +1,29 @@
+
+FAIL src/features/chat/services/chatSyncEngine.test.ts
+  ● ChatSyncEngine › lost responses › keeps one copy when a send whose response was lost is retried
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+        "hello",
+    +   "hello",
+      ]
+
+      108 |       await chat.engine.sync();
+      109 |
+    > 110 |       expect(chat.threadTexts()).toEqual(['hello']);
+          |                                  ^
+      111 |       expect(await chat.serverTexts()).toEqual(['hello']);
+      112 |     });
+      113 |   });
+
+      at Object.toEqual (src/features/chat/services/chatSyncEngine.test.ts:110:34)
+
+Test Suites: 1 failed, 2 skipped, 1 of 3 total
+Tests:       1 failed, 14 skipped, 15 total
+Snapshots:   0 total
+Time:        0.641 s, estimated 2 s
+Ran all test suites with tests matching "lost responses".

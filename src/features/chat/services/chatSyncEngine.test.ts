@@ -92,6 +92,26 @@ describe('ChatSyncEngine', () => {
     );
   });
 
+  describe('lost responses', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('keeps one copy when a send whose response was lost is retried', async () => {
+      const chat = await createChatHarness();
+      chat.network.setFault('loseNextSendResponse', true);
+
+      await chat.engine.send('hello');
+      await chat.engine.sync();
+      expect(chat.engine.store.getState().outbox).toHaveLength(1);
+
+      await jest.advanceTimersByTimeAsync(1_000);
+      await chat.engine.sync();
+
+      expect(chat.threadTexts()).toEqual(['hello']);
+      expect(await chat.serverTexts()).toEqual(['hello']);
+    });
+  });
+
   describe('server errors', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
