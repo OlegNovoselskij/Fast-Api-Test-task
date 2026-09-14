@@ -56,23 +56,40 @@ export class ChatServer {
         text TEXT NOT NULL,
         created_at INTEGER NOT NULL
       );
+      CREATE UNIQUE INDEX IF NOT EXISTS messages_client_id
+        ON messages (client_id) WHERE client_id IS NOT NULL;
     `);
     const server = new ChatServer(db, now);
     await server.seedIfEmpty(historySize);
     return server;
   }
 
+  /**
+   * Idempotent on `clientId`: a retry of an accepted send returns the stored message instead of
+   * inserting a copy, so at-least-once delivery from the client yields exactly one message.
+   */
   async sendMessage({ clientId, text }: SendMessageRequest): Promise<ServerMessage> {
     const body = text.trim();
     if (body.length === 0 || body.length > MAX_MESSAGE_LENGTH) {
       throw new ApiError(400, 'INVALID_REQUEST', 'Messages must be 1–400 characters.');
     }
 
-    const { lastInsertRowId } = await this.db.run(
-      'INSERT INTO messages (client_id, author, text, created_at) VALUES (?, ?, ?, ?)',
-      [clientId, 'fan', body, this.now()],
-    );
-    return this.getBySeq(lastInsertRowId);
+    return this.db.transaction(async (tx) => {
+      const existing = await tx.getFirst<MessageRow>('SELECT * FROM messages WHERE client_id = ?', [
+        clientId,
+      ]);
+      if (existing) return toMessage(existing);
+
+      const { lastInsertRowId } = await tx.run(
+        'INSERT INTO messages (client_id, author, text, created_at) VALUES (?, ?, ?, ?)',
+        [clientId, 'fan', body, this.now()],
+      );
+      const inserted = await tx.getFirst<MessageRow>('SELECT * FROM messages WHERE seq = ?', [
+        lastInsertRowId,
+      ]);
+      if (!inserted) throw new Error(`Message ${lastInsertRowId} vanished after insert`);
+      return toMessage(inserted);
+    });
   }
 
   async getLatest(limit: number): Promise<MessagePage> {
@@ -117,12 +134,6 @@ export class ChatServer {
         ]);
       }
     });
-  }
-
-  private async getBySeq(seq: number): Promise<ServerMessage> {
-    const row = await this.db.getFirst<MessageRow>('SELECT * FROM messages WHERE seq = ?', [seq]);
-    if (!row) throw new Error(`Message ${seq} vanished after insert`);
-    return toMessage(row);
   }
 
   private async seedIfEmpty(historySize: number): Promise<void> {

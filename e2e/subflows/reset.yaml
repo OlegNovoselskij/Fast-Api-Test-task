@@ -1,0 +1,14 @@
+appId: com.fansuite.chatdemo
+---
+- tapOn:
+    id: 'open-controls'
+- scrollUntilVisible:
+    element:
+      id: 'reset'
+- tapOn:
+    id: 'reset'
+- tapOn: 'Reset'
+- extendedWaitUntil:
+    visible:
+      id: 'composer-input'
+    timeout: 120000

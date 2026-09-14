@@ -1,0 +1,20 @@
+  ChatSyncEngine
+    ✓ persists an offline send before showing it as waiting (5 ms)
+    ✓ recovers queued sends and missed incoming messages after an app restart (3 ms)
+    ✓ keeps queued messages in local order until each is confirmed (2 ms)
+    ✓ does not skip messages that arrive between catching up and a send response (1 ms)
+    ✓ does not add copies when the same messages are received again (1 ms)
+    lost responses
+      ✓ keeps one copy when a send whose response was lost is retried (2 ms)
+      ✓ confirms a pending send from caught-up messages instead of sending it again (2 ms)
+    server errors
+      ✓ retries a temporary server error automatically (3 ms)
+      ✓ marks a send failed after repeated server errors and keeps its text for retry (2 ms)
+  ChatServer
+    ✓ generates the same history on every install (5 ms)
+    ✓ pages backwards through history in server order without gaps (2 ms)
+    ✓ keeps accepted messages when the backend is reopened (1 ms)
+    ✓ commits a send whose response is lost
+    ✓ returns the stored message when the same client ID is sent again (1 ms)
+    ✓ rejects requests while offline without reaching the server
+Tests:       15 passed, 15 total

@@ -55,6 +55,16 @@ describe('ChatServer', () => {
     expect((await server.getLatest(10)).messages).toHaveLength(1);
   });
 
+  it('returns the stored message when the same client ID is sent again', async () => {
+    const { api, server } = await setup(0);
+
+    const first = await api.sendMessage({ clientId: 'c-1', text: 'hello' });
+    const retry = await api.sendMessage({ clientId: 'c-1', text: 'hello' });
+
+    expect(retry).toEqual(first);
+    expect((await server.getLatest(10)).messages).toHaveLength(1);
+  });
+
   it('rejects requests while offline without reaching the server', async () => {
     const { api, server, network } = await setup(0);
     network.setOnline(false);

@@ -92,6 +92,41 @@ describe('ChatSyncEngine', () => {
     );
   });
 
+  describe('lost responses', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('keeps one copy when a send whose response was lost is retried', async () => {
+      const chat = await createChatHarness();
+      chat.network.setFault('loseNextSendResponse', true);
+
+      await chat.engine.send('hello');
+      await chat.engine.sync();
+      expect(chat.engine.store.getState().outbox).toHaveLength(1);
+
+      await jest.advanceTimersByTimeAsync(2_000);
+      await chat.engine.sync();
+
+      expect(chat.threadTexts()).toEqual(['hello']);
+      expect(await chat.serverTexts()).toEqual(['hello']);
+    });
+
+    it('confirms a pending send from caught-up messages instead of sending it again', async () => {
+      const chat = await createChatHarness();
+      const sendSpy = jest.spyOn(chat.server, 'sendMessage');
+      chat.network.setFault('loseNextSendResponse', true);
+
+      await chat.engine.send('hello');
+      await chat.engine.sync();
+      await jest.advanceTimersByTimeAsync(2_000);
+      await chat.engine.sync();
+
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+      expect(chat.engine.store.getState().outbox).toEqual([]);
+      expect(chat.threadTexts()).toEqual(['hello']);
+    });
+  });
+
   describe('server errors', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
@@ -107,7 +142,7 @@ describe('ChatSyncEngine', () => {
         attempts: 1,
       });
 
-      await jest.advanceTimersByTimeAsync(1_000);
+      await jest.advanceTimersByTimeAsync(2_000);
       await chat.engine.sync();
 
       expect(chat.engine.store.getState().outbox).toEqual([]);
@@ -123,10 +158,10 @@ describe('ChatSyncEngine', () => {
       await chat.engine.send('keep me');
       await chat.engine.sync();
       failSend();
-      await jest.advanceTimersByTimeAsync(1_000);
+      await jest.advanceTimersByTimeAsync(2_000);
       await chat.engine.sync();
       failSend();
-      await jest.advanceTimersByTimeAsync(2_000);
+      await jest.advanceTimersByTimeAsync(4_000);
       await chat.engine.sync();
 
       const [failed] = chat.engine.store.getState().outbox;
