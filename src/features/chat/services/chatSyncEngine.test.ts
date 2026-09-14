@@ -110,6 +110,21 @@ describe('ChatSyncEngine', () => {
       expect(chat.threadTexts()).toEqual(['hello']);
       expect(await chat.serverTexts()).toEqual(['hello']);
     });
+
+    it('confirms a pending send from caught-up messages instead of sending it again', async () => {
+      const chat = await createChatHarness();
+      const sendSpy = jest.spyOn(chat.server, 'sendMessage');
+      chat.network.setFault('loseNextSendResponse', true);
+
+      await chat.engine.send('hello');
+      await chat.engine.sync();
+      await jest.advanceTimersByTimeAsync(1_000);
+      await chat.engine.sync();
+
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+      expect(chat.engine.store.getState().outbox).toEqual([]);
+      expect(chat.threadTexts()).toEqual(['hello']);
+    });
   });
 
   describe('server errors', () => {

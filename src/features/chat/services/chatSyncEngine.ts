@@ -265,7 +265,12 @@ export class ChatSyncEngine {
     confirmedClientIds: string[],
     syncedThroughSeq?: number,
   ): Promise<void> {
+    const pendingIds = new Set(this.state.outbox.map((e) => e.clientId));
     const resolved = new Set(confirmedClientIds);
+    for (const message of messages) {
+      if (message.clientId && pendingIds.has(message.clientId)) resolved.add(message.clientId);
+    }
+
     await this.local.commitConfirmed(messages, [...resolved], syncedThroughSeq);
     this.setState({
       messages: mergeMessages(this.state.messages, messages),
