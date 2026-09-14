@@ -1,0 +1,32 @@
+appId: com.fansuite.chatdemo
+name: Offline sends survive a force-quit
+---
+- runFlow: subflows/launch.yaml
+- tapOn:
+    id: 'open-controls'
+- tapOn:
+    id: 'toggle-online'
+- tapOn:
+    text: 'Done'
+- tapOn:
+    id: 'composer-input'
+- inputText: 'Offline one'
+- tapOn:
+    id: 'composer-send'
+- inputText: 'Offline two'
+- tapOn:
+    id: 'composer-send'
+- inputText: 'Offline three'
+- tapOn:
+    id: 'composer-send'
+- hideKeyboard
+- assertVisible: '.*Offline three.*Waiting for network.*'
+- takeScreenshot: artifacts/raw/01-offline-three-waiting
+- stopApp
+- runFlow: subflows/launch.yaml
+- extendedWaitUntil:
+    visible: '.*Offline three.*Waiting for network.*'
+    timeout: 30000
+- takeScreenshot: artifacts/raw/02-after-force-quit
+- assertVisible: '.*Offline one.*Waiting for network.*'
+- assertVisible: '.*Offline two.*Waiting for network.*'

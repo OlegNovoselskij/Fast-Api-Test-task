@@ -1,0 +1,14 @@
+appId: com.fansuite.chatdemo
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    when:
+      visible: 'Toggle performance monitor'
+    commands:
+      - tapOn:
+          point: '90%,48%'
+- extendedWaitUntil:
+    visible:
+      id: 'composer-input'
+    timeout: 60000

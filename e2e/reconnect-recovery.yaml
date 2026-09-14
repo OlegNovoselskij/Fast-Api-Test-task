@@ -1,0 +1,22 @@
+appId: com.fansuite.chatdemo
+name: Reconnect recovers missed messages and flushes the outbox once
+---
+- runFlow: subflows/launch.yaml
+- assertVisible: '.*Offline three.*Waiting for network.*'
+- tapOn:
+    id: 'open-controls'
+- tapOn:
+    id: 'deliver-incoming'
+- tapOn:
+    id: 'toggle-online'
+- tapOn: 'Done'
+- extendedWaitUntil:
+    notVisible: '.*Waiting for network.*'
+    timeout: 20000
+- extendedWaitUntil:
+    notVisible: '.*Sending.*'
+    timeout: 20000
+- assertVisible: 'You: Offline one.*'
+- assertVisible: 'You: Offline two.*'
+- assertVisible: 'You: Offline three.*'
+- takeScreenshot: artifacts/raw/03-after-reconnect

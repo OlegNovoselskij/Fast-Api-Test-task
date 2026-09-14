@@ -2,3 +2,7 @@ ios
 android
 coverage
 docs
+artifacts
+CLAUDE.md
+README.md
+*.md
