@@ -1,0 +1,27 @@
+appId: com.fansuite.chatdemo
+name: A send whose response is lost is retried without a duplicate
+---
+- runFlow: subflows/launch.yaml
+- runFlow: subflows/reset.yaml
+- tapOn:
+    id: 'open-controls'
+- tapOn:
+    id: 'toggle-lose-response'
+- tapOn: 'Done'
+- tapOn:
+    id: 'composer-input'
+- inputText: 'Lost response check'
+- tapOn:
+    id: 'composer-send'
+- extendedWaitUntil:
+    visible: '.*Lost response check.*Not confirmed yet.*'
+    timeout: 10000
+- takeScreenshot: artifacts/raw/04-lost-response-retrying
+- extendedWaitUntil:
+    notVisible: '.*Lost response check.*(Not confirmed|Sending).*'
+    timeout: 20000
+- assertVisible: 'You: Lost response check.*'
+- assertNotVisible:
+    text: 'You: Lost response check.*'
+    index: 1
+- takeScreenshot: artifacts/raw/05-lost-response-single-copy

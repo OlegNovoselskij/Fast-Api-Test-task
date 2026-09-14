@@ -2,6 +2,7 @@ appId: com.fansuite.chatdemo
 name: Offline sends survive a force-quit
 ---
 - runFlow: subflows/launch.yaml
+- runFlow: subflows/reset.yaml
 - tapOn:
     id: 'open-controls'
 - tapOn:
