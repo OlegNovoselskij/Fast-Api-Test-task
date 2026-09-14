@@ -13,6 +13,7 @@ export type ThreadRowContext = {
   sendingClientId: string | null;
   onRetry: (clientId: string) => void;
   onDiscard: (clientId: string) => void;
+  onUpgrade: () => void;
 };
 
 type Props = { item: ThreadItem } & ThreadRowContext;
@@ -23,6 +24,7 @@ export const ThreadRow = memo(function ThreadRow({
   sendingClientId,
   onRetry,
   onDiscard,
+  onUpgrade,
 }: Props) {
   if (item.type === 'day') {
     return (
@@ -67,6 +69,7 @@ export const ThreadRow = memo(function ThreadRow({
           error={status.error}
           onRetry={onRetry}
           onDiscard={onDiscard}
+          onUpgrade={onUpgrade}
         />
       )}
     </View>

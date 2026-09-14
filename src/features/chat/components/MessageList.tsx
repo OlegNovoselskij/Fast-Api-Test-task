@@ -50,6 +50,7 @@ export function MessageList({
   sendingClientId,
   onRetry,
   onDiscard,
+  onUpgrade,
 }: Props) {
   const reduceMotion = useReducedMotion();
 
@@ -61,9 +62,10 @@ export function MessageList({
         sendingClientId={item.type === 'outgoing' ? sendingClientId : null}
         onRetry={onRetry}
         onDiscard={onDiscard}
+        onUpgrade={onUpgrade}
       />
     ),
-    [isOnline, sendingClientId, onRetry, onDiscard],
+    [isOnline, sendingClientId, onRetry, onDiscard, onUpgrade],
   );
 
   return (
