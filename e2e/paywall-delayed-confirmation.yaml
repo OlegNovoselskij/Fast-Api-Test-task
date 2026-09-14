@@ -1,0 +1,37 @@
+appId: com.fansuite.chatdemo
+name: Purchase stays pending until the backend confirms it
+---
+- runFlow: subflows/launch.yaml
+- runFlow: subflows/reset.yaml
+- tapOn:
+    id: 'open-controls'
+- scrollUntilVisible:
+    element:
+      id: 'confirmation-manual'
+- tapOn:
+    id: 'confirmation-manual'
+- tapOn: 'Done'
+- tapOn:
+    id: 'access-badge'
+- tapOn:
+    id: 'purchase'
+- tapOn:
+    id: 'purchase'
+- extendedWaitUntil:
+    visible: '.*Payment received, access not confirmed yet.*'
+    timeout: 10000
+- takeScreenshot: artifacts/raw/06-paywall-pending
+- tapOn: 'Done'
+- assertVisible: 'Payment received, confirming access'
+- tapOn:
+    id: 'open-controls'
+- scrollUntilVisible:
+    element:
+      id: 'confirm-pending'
+- tapOn:
+    id: 'confirm-pending'
+- tapOn: 'Done'
+- extendedWaitUntil:
+    visible: 'Fan in All Access. Manage subscription'
+    timeout: 10000
+- takeScreenshot: artifacts/raw/07-access-granted
