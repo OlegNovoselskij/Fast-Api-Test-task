@@ -42,7 +42,7 @@
     "android": "expo run:android",
     "ios:release": "expo run:ios --configuration Release",
     "android:release": "expo run:android --variant release",
-    "lint": "eslint .",
+    "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",

@@ -80,7 +80,10 @@ export class ChatServer {
       'SELECT * FROM messages ORDER BY seq DESC LIMIT ?',
       [limit + 1],
     );
-    return { messages: rows.slice(0, limit).reverse().map(toMessage), hasMore: rows.length > limit };
+    return {
+      messages: rows.slice(0, limit).reverse().map(toMessage),
+      hasMore: rows.length > limit,
+    };
   }
 
   async getBefore(beforeSeq: number, limit: number): Promise<MessagePage> {
@@ -88,7 +91,10 @@ export class ChatServer {
       'SELECT * FROM messages WHERE seq < ? ORDER BY seq DESC LIMIT ?',
       [beforeSeq, limit + 1],
     );
-    return { messages: rows.slice(0, limit).reverse().map(toMessage), hasMore: rows.length > limit };
+    return {
+      messages: rows.slice(0, limit).reverse().map(toMessage),
+      hasMore: rows.length > limit,
+    };
   }
 
   async getAfter(afterSeq: number, limit: number): Promise<MessagePage> {
@@ -131,7 +137,10 @@ export class ChatServer {
         const rows = batch.length / 3;
         if (rows === 0) return;
         const placeholders = Array.from({ length: rows }, () => '(?, ?, ?)').join(', ');
-        await tx.run(`INSERT INTO messages (author, text, created_at) VALUES ${placeholders}`, batch);
+        await tx.run(
+          `INSERT INTO messages (author, text, created_at) VALUES ${placeholders}`,
+          batch,
+        );
         batch = [];
       };
       for (const message of generateHistory(historySize)) {
